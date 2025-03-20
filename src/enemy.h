@@ -6,7 +6,7 @@
 class Enemy {
 public:
     Enemy(int x, int y);
-    void update();
+    void update(float speed);
     void render(SDL_Renderer* renderer);
     bool isActive() { return active; }
     void deactivate() { active = false; }

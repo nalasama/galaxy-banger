@@ -2,6 +2,7 @@
 #define GAME_H
 
 #include <SDL.h>
+#include <SDL_ttf.h>
 #include <vector>
 #include <algorithm>
 #include <string>
@@ -28,11 +29,20 @@ private:
     std::vector<Bullet> bullets;
     std::vector<Enemy> enemies;
     SDL_Texture* loadTexture(const std::string& path);
-
     SDL_Texture* backgroundTexture;
-
-
     bool checkCollision(SDL_Rect a, SDL_Rect b);
+    //int score = 0;
+    float enemySpeed = 2.0f;
+    int enemySpawnRate = 50;
+    SDL_Rect scoreRect; // Vị trí và kích thước của điểm số
+    // **Thêm biến lưu điểm số**
+    int score = 0;
+
+    // **Thêm biến font để hiển thị điểm**
+    TTF_Font* font;
+
+    void renderScore();
+
 };
 
 #endif

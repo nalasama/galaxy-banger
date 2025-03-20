@@ -16,7 +16,10 @@ public:
 private:
     SDL_Rect rect;
     int speed = 5;
-    bool moveLeft = false, moveRight = false,speedup = false,speeddown = false;
+    bool moveLeft = false, moveRight = false;
+    bool moveUp = false, moveDown = false;
+    bool speedup = false;
+
 };
 
 #endif
