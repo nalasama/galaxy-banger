@@ -20,6 +20,20 @@ bool Game::init() {
         std::cerr << "SDL Init Failed: " << SDL_GetError() << std::endl;
         return false;
     }
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+    std::cerr << "Lỗi khởi tạo SDL_mixer: " << Mix_GetError() << std::endl;
+    return false;
+    }
+
+    backgroundMusic = Mix_LoadMUS("Elden Ring theme.mp3");
+    if (!backgroundMusic) {
+        std::cerr << "Không thể tải nhạc nền: " << Mix_GetError() << std::endl;
+        return false;
+    }
+
+    Mix_PlayMusic(backgroundMusic, -1); // Phát lặp vô hạn
+
+
 
     window = SDL_CreateWindow("Space Shooter", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_SHOWN);
     if (!window) return false;
@@ -48,22 +62,79 @@ bool Game::init() {
 void Game::handleEvents() {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
-        if (event.type == SDL_QUIT) running = false;
-        player->handleInput(event, bullets);
+        if (event.type == SDL_QUIT) {
+            gameState = EXIT;
+            running = false; // Dừng game
+        }
+
+        if (event.type == SDL_KEYDOWN) {
+            switch (event.key.keysym.sym) {
+                case SDLK_1:
+                    if (gameState == MENU) {
+                        gameState = PLAYING;
+                    }
+                    break;
+                case SDLK_2:
+                    if (gameState == MENU) {
+                        gameState = EXIT;
+                        running = false; // Dừng game
+                    }
+                    break;
+                case SDLK_ESCAPE:
+                    gameState = MENU;  // Nhấn ESC để quay lại menu
+                    break;
+            }
+
+            if (gameState == PLAYING) {
+                player->handleInput(event, bullets);
+            }
+        }
+        if (event.type == SDL_KEYUP && gameState == PLAYING) {
+            player->handleInput(event, bullets);
+        }
     }
 }
+
+
+void Game::renderMenu() {
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+
+    SDL_Color textColor = {255, 255, 255, 255};
+
+    SDL_Surface* playSurface = TTF_RenderText_Solid(font, "1. Play", textColor);
+    SDL_Surface* quitSurface = TTF_RenderText_Solid(font, "2. Quit", textColor);
+
+    SDL_Texture* playTexture = SDL_CreateTextureFromSurface(renderer, playSurface);
+    SDL_Texture* quitTexture = SDL_CreateTextureFromSurface(renderer, quitSurface);
+
+    SDL_Rect playRect = {350, 200, playSurface->w, playSurface->h};
+    SDL_Rect quitRect = {350, 300, quitSurface->w, quitSurface->h};
+
+    SDL_RenderCopy(renderer, playTexture, NULL, &playRect);
+    SDL_RenderCopy(renderer, quitTexture, NULL, &quitRect);
+
+    SDL_RenderPresent(renderer);
+
+    SDL_FreeSurface(playSurface);
+    SDL_FreeSurface(quitSurface);
+    SDL_DestroyTexture(playTexture);
+    SDL_DestroyTexture(quitTexture);
+}
+
+
 
 void Game::update() {
     player->update();
 
     // **Cập nhật tốc độ enemy dựa vào điểm số**
-    enemySpeed = 2.0f + (score / 50);  // Cứ mỗi 50 điểm, enemy nhanh hơn
+    enemySpeed = 1.0f + (score / 100);  // Cứ mỗi 100 điểm, enemy nhanh hơn
 
     // **Giảm thời gian spawn enemy khi đạt mốc điểm**
-    if (score >= 100) enemySpawnRate = 40;
-    if (score >= 200) enemySpawnRate = 30;
-    if (score >= 300) enemySpawnRate = 20;
-    if (score >= 500) enemySpawnRate = 10; // Khi đạt 500 điểm, enemy xuất hiện liên tục
+    if (score >= 300) enemySpawnRate = 40;
+    if (score >= 400) enemySpawnRate = 30;
+    if (score >= 500) enemySpawnRate = 20;
+    if (score >= 600) enemySpawnRate = 10; // Khi đạt 600 điểm, enemy xuất hiện liên tục
 
     for (auto& bullet : bullets) bullet.update();
     for (auto& enemy : enemies) {
@@ -92,6 +163,11 @@ void Game::update() {
         std::cout << "Game Over! Enemy ra khoi man hinh .\n";
         return;
     }
+    if (!running) {
+    gameState = MENU;
+    running = true;
+    }
+
     }
 
     enemies.erase(std::remove_if(enemies.begin(), enemies.end(), [](Enemy& e) { return !e.isActive(); }), enemies.end());
@@ -151,6 +227,8 @@ void Game::clean() {
     SDL_DestroyWindow(window);
     TTF_CloseFont(font); // **Đóng font**
     TTF_Quit(); // **Thoát SDL_ttf**
+    Mix_FreeMusic(backgroundMusic);
+    Mix_CloseAudio();
     SDL_Quit();
 }
 
