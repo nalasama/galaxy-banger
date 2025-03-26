@@ -39,16 +39,14 @@ private:
     SDL_Texture* loadTexture(const std::string& path);
     SDL_Texture* backgroundTexture;
     bool checkCollision(SDL_Rect a, SDL_Rect b);
-    //int score = 0;
     float enemySpeed = 1.0f;
     int enemySpawnRate = 50;
-    SDL_Rect scoreRect; // Vị trí và kích thước của điểm số
-    // **Thêm biến lưu điểm số**
+    SDL_Rect scoreRect;
+
     int score = 0;
-
-    // **Thêm biến font để hiển thị điểm**
+    void showGameOverScreen();
+    void resetGame();
     TTF_Font* font;
-
     void renderScore();
 
 };

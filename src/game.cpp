@@ -31,10 +31,6 @@ bool Game::init() {
         return false;
     }
 
-    Mix_PlayMusic(backgroundMusic, -1); // Phát lặp vô hạn
-
-
-
     window = SDL_CreateWindow("Space Shooter", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_SHOWN);
     if (!window) return false;
 
@@ -53,7 +49,13 @@ bool Game::init() {
         std::cerr << "Không thể tải font: " << TTF_GetError() << std::endl;
         return false;
     }
-
+    player->loadTexture(renderer, "player.png");
+    for (auto& enemy : enemies) {
+        enemy.loadTexture(renderer, "enemy.png");
+    }
+    for (auto& bullet : bullets) {
+        bullet.loadTexture(renderer, "bullet.png");
+    }
     player = new Player(375, 500);
     running = true;
     return true;
@@ -69,19 +71,27 @@ void Game::handleEvents() {
 
         if (event.type == SDL_KEYDOWN) {
             switch (event.key.keysym.sym) {
-                case SDLK_1:
+                case SDLK_1: // Chọn "Play" từ menu
                     if (gameState == MENU) {
                         gameState = PLAYING;
+                        if (Mix_PausedMusic()) {
+                            Mix_ResumeMusic(); // Tiếp tục phát nhạc từ chỗ dừng
+                        } else {
+                            Mix_PlayMusic(backgroundMusic, -1); // Phát lại nếu chưa phát trước đó
+                        }
                     }
                     break;
                 case SDLK_2:
                     if (gameState == MENU) {
                         gameState = EXIT;
-                        running = false; // Dừng game
+                        running = false;
                     }
                     break;
                 case SDLK_ESCAPE:
-                    gameState = MENU;  // Nhấn ESC để quay lại menu
+                     if (gameState == PLAYING) {
+                        gameState = MENU;
+                        Mix_PauseMusic(); // Tạm dừng nhạc thay vì dừng hẳn
+                    }
                     break;
             }
 
@@ -153,22 +163,19 @@ void Game::update() {
 
     for (auto& enemy : enemies) {
         enemy.update(enemySpeed);
-        if (checkCollision(player->getRect(), enemy.getRect())) {
-            running = false;
-            std::cout << "Game Over! Player va cham voi Enemy.\n";
+        if (checkCollision(player->getRect(), enemy.getRect()) || enemy.getRect().y > 600) {
+            showGameOverScreen();
             return;
         }
-        if (enemy.getRect().y > 600) { // Giả sử chiều cao màn hình là 600
-        running = false;
-        std::cout << "Game Over! Enemy ra khoi man hinh .\n";
-        return;
-    }
+
     if (!running) {
     gameState = MENU;
     running = true;
     }
 
     }
+
+
 
     enemies.erase(std::remove_if(enemies.begin(), enemies.end(), [](Enemy& e) { return !e.isActive(); }), enemies.end());
     bullets.erase(std::remove_if(bullets.begin(), bullets.end(), [](Bullet& b) { return !b.isActive(); }), bullets.end());
@@ -177,6 +184,40 @@ void Game::update() {
     if (rand() % enemySpawnRate == 0) {
         enemies.push_back(Enemy(rand() % 750, -50));
     }
+}
+
+void Game::showGameOverScreen() {
+    Mix_HaltMusic(); // Dừng hẳn nhạc khi game over
+
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+
+    SDL_Color textColor = {255, 0, 0, 255}; // Màu đỏ
+    SDL_Surface* surface = TTF_RenderText_Solid(font, "GAME OVER", textColor);
+    if (!surface) return;
+
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_Rect gameOverRect = {(800 - surface->w) / 2, (600 - surface->h) / 2, surface->w, surface->h};
+
+    SDL_FreeSurface(surface);
+    SDL_RenderCopy(renderer, texture, NULL, &gameOverRect);
+    SDL_DestroyTexture(texture);
+    SDL_RenderPresent(renderer);
+
+    SDL_Delay(1000); // Hiển thị màn hình Game Over trong 3 giây
+
+    gameState = MENU;
+    resetGame(); // Reset game để chơi lại
+}
+
+void Game::resetGame() {
+    score = 0; // Đặt lại điểm số
+    player = new Player(375, 500); // Đặt lại vị trí nhân vật
+    bullets.clear(); // Xóa tất cả đạn
+    enemies.clear(); // Xóa tất cả enemy
+    enemySpeed = 1.0f;
+    enemySpawnRate = 50;
+    running = true; // Chạy lại game
 }
 
 
