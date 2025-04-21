@@ -1,6 +1,7 @@
 #include "Player.h"
+#include "game.h"
 Player::Player(int x, int y) {
-    rect = {x, y, 50, 50};
+    rect = {x, y, 100, 100};
 }
 
 void Player::handleInput(SDL_Event& event, std::vector<Bullet>& bullets) {
@@ -10,7 +11,14 @@ void Player::handleInput(SDL_Event& event, std::vector<Bullet>& bullets) {
         if (event.key.keysym.sym == SDLK_UP) moveUp = true;
         if (event.key.keysym.sym == SDLK_DOWN) moveDown = true;
         if (event.key.keysym.sym == SDLK_LSHIFT) speedup = true;
-        if (event.key.keysym.sym == SDLK_SPACE) bullets.push_back(Bullet(rect.x, rect.y));
+        if (event.key.keysym.sym == SDLK_SPACE) {
+            Uint32 currentTime = SDL_GetTicks();
+            if (currentTime - lastShotTime >= shootDelay) {
+                bullets.push_back(Bullet(rect.x, rect.y));
+                lastShotTime = currentTime;
+            }
+        }
+
     }
     else if (event.type == SDL_KEYUP) {
         if (event.key.keysym.sym == SDLK_LEFT) moveLeft = false;
@@ -22,7 +30,7 @@ void Player::handleInput(SDL_Event& event, std::vector<Bullet>& bullets) {
 }
 
 void Player::update() {
-      int moveSpeed = speedup ? speed + 10 : speed;
+      int moveSpeed = speedup ? speed + 100 : speed;
 //  which mean:
 //    int moveSpeed;
 //    if (speedup) {
@@ -33,9 +41,15 @@ void Player::update() {
 
 
     if (moveLeft && rect.x > 0) rect.x -= moveSpeed;
-    if (moveRight && rect.x < 800 - rect.w) rect.x += moveSpeed;
+    if (moveRight && rect.x < 1920 - rect.w) rect.x += moveSpeed;
     if (moveUp && rect.y > 0) rect.y -= moveSpeed;
-    if (moveDown && rect.y < 600 - rect.h) rect.y += moveSpeed;
+    if (moveDown && rect.y < 1080 - rect.h) rect.y += moveSpeed;
+    if(rect.x<0)rect.x = 0;
+    if(rect.y<120)rect.y = 120;
+    if(rect.x + 100 > 1920)rect.x = 1820;
+    if(rect.y + 100 > 1080)rect.y = 980;
+
+
 }
 void Player::loadTexture(SDL_Renderer* renderer, const std::string& path) {
     SDL_Surface* surface = IMG_Load(path.c_str());
@@ -45,6 +59,14 @@ void Player::loadTexture(SDL_Renderer* renderer, const std::string& path) {
     }
     texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
+}
+void Player::setShootDelayByLevel(int level) {
+    if (level <= 1) shootDelay = 400;
+    else if (level == 2) shootDelay = 350;
+    else if (level == 3) shootDelay = 250;
+    else if (level == 4) shootDelay = 150;
+    else if (level == 5) shootDelay = 50;
+    else shootDelay = 0; // level 6 trở lên
 }
 
 void Player::render(SDL_Renderer* renderer) {

@@ -14,12 +14,16 @@ public:
     void loadTexture(SDL_Renderer* renderer, const std::string& path);
     void update();
     void render(SDL_Renderer* renderer);
+    void setShootDelayByLevel(int level);
+
     SDL_Rect getRect() { return rect; }
 
 private:
+    Uint32 lastShotTime = 0; // thời điểm bắn gần nhất
+    Uint32 shootDelay = 400; // thời gian delay giữa các lần bắn (ms) — ví dụ 300m
     SDL_Rect rect;
     SDL_Texture* texture = nullptr;
-    int speed = 5;
+    int speed = 10;
     bool moveLeft = false, moveRight = false;
     bool moveUp = false, moveDown = false;
     bool speedup = false;

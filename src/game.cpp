@@ -1,7 +1,9 @@
 #include "Game.h"
+#include "Player.h"
 #include <iostream>
 #include <SDL_image.h>
 #include <SDL_ttf.h>
+using namespace std;
 
 Game::Game() : window(nullptr), renderer(nullptr), running(false), backgroundTexture(nullptr) {}
 
@@ -31,7 +33,7 @@ bool Game::init() {
         return false;
     }
 
-    window = SDL_CreateWindow("Space Shooter", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_SHOWN);
+    window = SDL_CreateWindow("Space Shooter", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920, 1080, SDL_WINDOW_SHOWN);
     if (!window) return false;
 
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
@@ -43,20 +45,18 @@ bool Game::init() {
         std::cerr << "Lỗi: Không thể tải ảnh nền!" << std::endl;
         return false;
     }
-    font = TTF_OpenFont("Times New Roman.ttf", 24);
+    font = TTF_OpenFont("Times New Roman.ttf", 100);
 
     if (!font) {
         std::cerr << "Không thể tải font: " << TTF_GetError() << std::endl;
         return false;
     }
+    player = new Player(960, 980);
     player->loadTexture(renderer, "player.png");
-    for (auto& enemy : enemies) {
-        enemy.loadTexture(renderer, "enemy.png");
-    }
+
     for (auto& bullet : bullets) {
         bullet.loadTexture(renderer, "bullet.png");
     }
-    player = new Player(375, 500);
     running = true;
     return true;
 }
@@ -118,8 +118,8 @@ void Game::renderMenu() {
     SDL_Texture* playTexture = SDL_CreateTextureFromSurface(renderer, playSurface);
     SDL_Texture* quitTexture = SDL_CreateTextureFromSurface(renderer, quitSurface);
 
-    SDL_Rect playRect = {350, 200, playSurface->w, playSurface->h};
-    SDL_Rect quitRect = {350, 300, quitSurface->w, quitSurface->h};
+    SDL_Rect playRect = {840, 450, playSurface->w, playSurface->h};
+    SDL_Rect quitRect = {840, 600, quitSurface->w, quitSurface->h};
 
     SDL_RenderCopy(renderer, playTexture, NULL, &playRect);
     SDL_RenderCopy(renderer, quitTexture, NULL, &quitRect);
@@ -141,10 +141,30 @@ void Game::update() {
     enemySpeed = 1.0f + (score / 100);  // Cứ mỗi 100 điểm, enemy nhanh hơn
 
     // **Giảm thời gian spawn enemy khi đạt mốc điểm**
-    if (score >= 300) enemySpawnRate = 40;
-    if (score >= 400) enemySpawnRate = 30;
-    if (score >= 500) enemySpawnRate = 20;
-    if (score >= 600) enemySpawnRate = 10; // Khi đạt 600 điểm, enemy xuất hiện liên tục
+    if (score >= 200){
+        level = 2;
+
+    }
+    if (score >= 300){
+        enemySpawnRate = 40;
+        level = 3;
+    }
+    if (score >= 400){
+        enemySpawnRate = 30;
+        level = 4;
+    }
+    if (score >= 500) {
+        enemySpawnRate = 20;
+        level = 5;
+    }
+    if (score >= 600) {
+        enemySpawnRate = 10;
+        level = 6;
+    }
+    player->setShootDelayByLevel(level);
+
+
+
 
     for (auto& bullet : bullets) bullet.update();
     for (auto& enemy : enemies) {
@@ -161,12 +181,22 @@ void Game::update() {
         }
     }
 
+
+        for (auto& enemy : enemies) {
+            if (checkCollision(player->getRect(), enemy.getRect())) {
+                enemy.deactivate();
+                score += 10; // Cộng điểm va cham voi enemy
+            }
+        }
+
     for (auto& enemy : enemies) {
         enemy.update(enemySpeed);
-        if (checkCollision(player->getRect(), enemy.getRect()) || enemy.getRect().y > 600) {
+        //checkCollision(player->getRect(), enemy.getRect()) ||
+        if(enemy.getRect().y > 1080) {
             showGameOverScreen();
             return;
         }
+
 
     if (!running) {
     gameState = MENU;
@@ -182,7 +212,9 @@ void Game::update() {
 
     // **Tạo enemy dựa trên enemySpawnRate**
     if (rand() % enemySpawnRate == 0) {
-        enemies.push_back(Enemy(rand() % 750, -50));
+        Enemy newEnemy(rand() % 1820, -100);
+        newEnemy.loadTexture(renderer, "enemy.png");
+        enemies.push_back(newEnemy);
     }
 }
 
@@ -197,7 +229,7 @@ void Game::showGameOverScreen() {
     if (!surface) return;
 
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_Rect gameOverRect = {(800 - surface->w) / 2, (600 - surface->h) / 2, surface->w, surface->h};
+    SDL_Rect gameOverRect = {(1920 - surface->w) / 2, (1080 - surface->h) / 2, surface->w, surface->h};
 
     SDL_FreeSurface(surface);
     SDL_RenderCopy(renderer, texture, NULL, &gameOverRect);
@@ -212,11 +244,13 @@ void Game::showGameOverScreen() {
 
 void Game::resetGame() {
     score = 0; // Đặt lại điểm số
-    player = new Player(375, 500); // Đặt lại vị trí nhân vật
+    player = new Player(960, 980); // Đặt lại vị trí nhân vật
+    player->loadTexture(renderer, "player.png");
     bullets.clear(); // Xóa tất cả đạn
     enemies.clear(); // Xóa tất cả enemy
-    enemySpeed = 1.0f;
-    enemySpawnRate = 50;
+    enemySpeed = 0.5f;
+    enemySpawnRate = 60;
+    level = 1;
     running = true; // Chạy lại game
 }
 
@@ -232,33 +266,69 @@ void Game::render() {
     player->render(renderer);
     for (auto& bullet : bullets) bullet.render(renderer);
     for (auto& enemy : enemies) enemy.render(renderer);
-    renderScore();
+    renderScoreAndLevel();
     SDL_RenderPresent(renderer);
 }
-void Game::renderScore() {
-    SDL_Color textColor = {255, 255, 255, 255}; // Màu trắng
+void Game::renderHeaderBar() {
+    // Vẽ thanh nền đen ở đầu màn hình
+    SDL_Rect headerRect;
+    headerRect.x = 0;
+    headerRect.y = 0;
+    headerRect.w = 1920;
+    headerRect.h = 120; // chiều cao thanh
+
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // màu đen
+    SDL_RenderFillRect(renderer, &headerRect);
+}
+
+void Game::renderScoreAndLevel() {
+    renderHeaderBar(); // Vẽ nền trước
+
+    // ----- Score -----
+    SDL_Color textColor = {255, 255, 255, 255}; // màu trắng
     std::string scoreText = "Score: " + std::to_string(score);
 
-    SDL_Surface* textSurface = TTF_RenderText_Solid(font, scoreText.c_str(), textColor);
-    if (!textSurface) return;
+    SDL_Surface* scoreSurface = TTF_RenderText_Solid(font, scoreText.c_str(), textColor);
+    if (!scoreSurface) return;
 
-    SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
-    if (!textTexture) {
-        SDL_FreeSurface(textSurface);
+    SDL_Texture* scoreTexture = SDL_CreateTextureFromSurface(renderer, scoreSurface);
+    if (!scoreTexture) {
+        SDL_FreeSurface(scoreSurface);
         return;
     }
 
-    // **Khởi tạo scoreRect trước khi sử dụng**
+    SDL_Rect scoreRect;
     scoreRect.x = 10;
     scoreRect.y = 10;
-    scoreRect.w = textSurface->w;
-    scoreRect.h = textSurface->h;
+    scoreRect.w = scoreSurface->w;
+    scoreRect.h = scoreSurface->h;
 
-    SDL_FreeSurface(textSurface);
+    SDL_FreeSurface(scoreSurface);
+    SDL_RenderCopy(renderer, scoreTexture, NULL, &scoreRect);
+    SDL_DestroyTexture(scoreTexture);
 
-    SDL_RenderCopy(renderer, textTexture, NULL, &scoreRect);
-    SDL_DestroyTexture(textTexture);
+    // ----- Level -----
+    std::string levelText = "Level: " + std::to_string(level);
+    SDL_Surface* levelSurface = TTF_RenderText_Solid(font, levelText.c_str(), textColor);
+    if (!levelSurface) return;
+
+    SDL_Texture* levelTexture = SDL_CreateTextureFromSurface(renderer, levelSurface);
+    if (!levelTexture) {
+        SDL_FreeSurface(levelSurface);
+        return;
+    }
+
+    SDL_Rect levelRect;
+    levelRect.w = levelSurface->w;
+    levelRect.h = levelSurface->h;
+    levelRect.x = 1920 - levelRect.w - 10; // canh phải
+    levelRect.y = 10;
+
+    SDL_FreeSurface(levelSurface);
+    SDL_RenderCopy(renderer, levelTexture, NULL, &levelRect);
+    SDL_DestroyTexture(levelTexture);
 }
+
 
 
 
@@ -274,7 +344,7 @@ void Game::clean() {
 }
 
 
-bool Game::checkCollision(SDL_Rect a, SDL_Rect b) {
+bool Game::checkCollision(SDL_Rect a,SDL_Rect b) {
     return (a.x < b.x + b.w &&
             a.x + a.w > b.x &&
             a.y < b.y + b.h &&

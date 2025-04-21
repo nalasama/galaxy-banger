@@ -1,11 +1,11 @@
 #include "Bullet.h"
 
 Bullet::Bullet(int x, int y) {
-    rect = {x + 20, y, 10, 20}; // Đạn bắn từ giữa nhân vật
+    rect = {x + 48 , y, 4, 40}; // Đạn bắn từ giữa nhân vật
 }
 
 void Bullet::update() {
-    rect.y -= 10;
+    rect.y -= 20;
     if (rect.y < 0) active = false; // Nếu đạn ra khỏi màn hình thì biến mất
 }
 void Bullet::loadTexture(SDL_Renderer* renderer, const std::string& path) {

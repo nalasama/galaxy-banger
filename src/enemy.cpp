@@ -1,12 +1,12 @@
 #include "Enemy.h"
 
 Enemy::Enemy(int x, int y) {
-    rect = {x, y, 50, 50};
+    rect = {x, y, 100, 100};
 }
 
 void Enemy::update(float speed) {
     rect.y += speed; // **Dùng tốc độ động thay vì cố định 2**
-    if (rect.y > 600) active = false; // Enemy biến mất khi ra khỏi màn hình
+    if (rect.y > 1080) active = false; // Enemy biến mất khi ra khỏi màn hình
 }
 void Enemy::loadTexture(SDL_Renderer* renderer, const std::string& path) {
     SDL_Surface* surface = IMG_Load(path.c_str());

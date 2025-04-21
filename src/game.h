@@ -10,7 +10,8 @@
 #include "Player.h"
 #include "Bullet.h"
 #include "Enemy.h"
-#include "render.h"
+#include "Player.h"
+//#include "render.h"
 enum GameState { MENU, PLAYING, EXIT };
 
 class Game {
@@ -41,14 +42,16 @@ private:
     bool checkCollision(SDL_Rect a, SDL_Rect b);
     float enemySpeed = 1.0f;
     int enemySpawnRate = 50;
+    int level = 1;
+    SDL_Rect levelRect;
+    int score = 0;
     SDL_Rect scoreRect;
 
-    int score = 0;
     void showGameOverScreen();
     void resetGame();
     TTF_Font* font;
-    void renderScore();
-
+    void renderScoreAndLevel();
+    void renderHeaderBar();
 };
 
 #endif
