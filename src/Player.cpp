@@ -30,15 +30,7 @@ void Player::handleInput(SDL_Event& event, std::vector<Bullet>& bullets) {
 }
 
 void Player::update() {
-      int moveSpeed = speedup ? speed + 100 : speed;
-//  which mean:
-//    int moveSpeed;
-//    if (speedup) {
-//        moveSpeed = speed + 10;
-//    } else {
-//        moveSpeed = speed;
-//    }
-
+    int moveSpeed = speedup ? speed + 20 : speed;
 
     if (moveLeft && rect.x > 0) rect.x -= moveSpeed;
     if (moveRight && rect.x < 1920 - rect.w) rect.x += moveSpeed;
@@ -54,7 +46,7 @@ void Player::update() {
 void Player::loadTexture(SDL_Renderer* renderer, const std::string& path) {
     SDL_Surface* surface = IMG_Load(path.c_str());
     if (!surface) {
-        std::cerr << "Lỗi tải ảnh Player: " << IMG_GetError() << std::endl;
+        std::cerr << "Failed to load Image Player: " << IMG_GetError() << std::endl;
         return;
     }
     texture = SDL_CreateTextureFromSurface(renderer, surface);

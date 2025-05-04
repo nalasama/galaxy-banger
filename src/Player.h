@@ -20,7 +20,7 @@ public:
 
 private:
     Uint32 lastShotTime = 0; // thời điểm bắn gần nhất
-    Uint32 shootDelay = 400; // thời gian delay giữa các lần bắn (ms) — ví dụ 300m
+    Uint32 shootDelay = 0; // thời gian delay giữa các lần bắn (ms) — ví dụ 100ms
     SDL_Rect rect;
     SDL_Texture* texture = nullptr;
     int speed = 10;

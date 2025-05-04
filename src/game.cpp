@@ -14,7 +14,7 @@ Game::~Game() {
 bool Game::init() {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) return false;
     if (TTF_Init() == -1) {
-    std::cerr << "Lỗi khởi tạo SDL_ttf: " << TTF_GetError() << std::endl;
+    std::cerr << "SDL_ttf Failed: " << TTF_GetError() << std::endl;
     return false;
 }
 
@@ -23,13 +23,13 @@ bool Game::init() {
         return false;
     }
     if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
-    std::cerr << "Lỗi khởi tạo SDL_mixer: " << Mix_GetError() << std::endl;
+    std::cerr << "SDL_mixer Failed: " << Mix_GetError() << std::endl;
     return false;
     }
 
     backgroundMusic = Mix_LoadMUS("Elden Ring theme.mp3");
     if (!backgroundMusic) {
-        std::cerr << "Không thể tải nhạc nền: " << Mix_GetError() << std::endl;
+        std::cerr << "Coundn't load theme music: " << Mix_GetError() << std::endl;
         return false;
     }
 
@@ -42,21 +42,19 @@ bool Game::init() {
     // Load ảnh nền
     backgroundTexture = loadTexture("galaxy.jpg");
     if (!backgroundTexture) {
-        std::cerr << "Lỗi: Không thể tải ảnh nền!" << std::endl;
+        std::cerr << "Couldn't load background" << std::endl;
         return false;
     }
     font = TTF_OpenFont("Times New Roman.ttf", 100);
 
     if (!font) {
-        std::cerr << "Không thể tải font: " << TTF_GetError() << std::endl;
+        std::cerr << "Couldn't load font: " << TTF_GetError() << std::endl;
         return false;
     }
     player = new Player(960, 980);
     player->loadTexture(renderer, "player.png");
 
-    for (auto& bullet : bullets) {
-        bullet.loadTexture(renderer, "bullet.png");
-    }
+
     running = true;
     return true;
 }
@@ -128,8 +126,7 @@ void Game::renderMenu() {
 
     SDL_FreeSurface(playSurface);
     SDL_FreeSurface(quitSurface);
-    SDL_DestroyTexture(playTexture);
-    SDL_DestroyTexture(quitTexture);
+
 }
 
 
@@ -137,8 +134,15 @@ void Game::renderMenu() {
 void Game::update() {
     player->update();
 
+    // **Tạo enemy dựa trên enemySpawnRate**
+    if (rand() % enemySpawnRate == 0) {
+        Enemy newEnemy(rand() % 1820, -100);
+        newEnemy.loadTexture(renderer, "enemy.png");
+        enemies.push_back(newEnemy);
+    }
+
     // **Cập nhật tốc độ enemy dựa vào điểm số**
-    enemySpeed = 1.0f + (score / 100);  // Cứ mỗi 100 điểm, enemy nhanh hơn
+    enemySpeed = 1.0f + (score / 200);  // Cứ mỗi 200 điểm, enemy nhanh hơn
 
     // **Giảm thời gian spawn enemy khi đạt mốc điểm**
     if (score >= 200){
@@ -146,29 +150,27 @@ void Game::update() {
 
     }
     if (score >= 300){
-        enemySpawnRate = 40;
+        enemySpawnRate = 70;
         level = 3;
     }
     if (score >= 400){
-        enemySpawnRate = 30;
+        enemySpawnRate = 60;
         level = 4;
     }
     if (score >= 500) {
-        enemySpawnRate = 20;
+        enemySpawnRate = 50;
         level = 5;
     }
     if (score >= 600) {
-        enemySpawnRate = 10;
+        enemySpawnRate = 40;
         level = 6;
     }
     player->setShootDelayByLevel(level);
 
-
-
-
     for (auto& bullet : bullets) bullet.update();
-    for (auto& enemy : enemies) {
-        enemy.update(enemySpeed);
+    SDL_Rect playerRect = player->getRect();
+        for (auto& enemy : enemies) {
+        enemy.update(enemySpeed, playerRect);
     }
 
     for (auto& bullet : bullets) {
@@ -181,21 +183,42 @@ void Game::update() {
         }
     }
 
-
-        for (auto& enemy : enemies) {
-            if (checkCollision(player->getRect(), enemy.getRect())) {
-                enemy.deactivate();
-                score += 10; // Cộng điểm va cham voi enemy
-            }
+    for (auto& enemy : enemies) {
+        if (checkCollision(player->getRect(), enemy.getRect())) {
+            enemy.deactivate();
+            score += 10; // Cộng điểm khi bắn trúng enemy
         }
+    }
 
     for (auto& enemy : enemies) {
-        enemy.update(enemySpeed);
-        //checkCollision(player->getRect(), enemy.getRect()) ||
+        enemy.update(enemySpeed, playerRect);
         if(enemy.getRect().y > 1080) {
             showGameOverScreen();
             return;
         }
+        // Enemy bắn đạn ngẫu nhiên
+
+    for (auto& b : enemyBullets) b.update();
+
+    for (auto& b : enemyBullets) {
+        if (checkCollision(b.getRect(), player->getRect())) {
+            showGameOverScreen();
+            return;
+        }
+    }
+    Uint32 currentTime = SDL_GetTicks();
+
+    // Điều kiện bắn:
+    currentTime = SDL_GetTicks();
+
+    if (enemy.getRect().y > 120 &&
+        abs(enemy.getRect().x - player->getRect().x) < 50 &&
+        currentTime - enemy.getLastShotTime() >= 2000 &&
+        player ->getRect().y > enemy.getRect().y) // 2 giây
+    {
+        enemyBullets.emplace_back(enemy.getRect().x, enemy.getRect().y);
+        enemy.setLastShotTime(currentTime);
+    }
 
 
     if (!running) {
@@ -204,18 +227,11 @@ void Game::update() {
     }
 
     }
-
-
-
+    enemyBullets.erase(std::remove_if(enemyBullets.begin(), enemyBullets.end(),
+                        [](EnemyBullet& b) { return !b.isActive(); }), enemyBullets.end());
     enemies.erase(std::remove_if(enemies.begin(), enemies.end(), [](Enemy& e) { return !e.isActive(); }), enemies.end());
     bullets.erase(std::remove_if(bullets.begin(), bullets.end(), [](Bullet& b) { return !b.isActive(); }), bullets.end());
 
-    // **Tạo enemy dựa trên enemySpawnRate**
-    if (rand() % enemySpawnRate == 0) {
-        Enemy newEnemy(rand() % 1820, -100);
-        newEnemy.loadTexture(renderer, "enemy.png");
-        enemies.push_back(newEnemy);
-    }
 }
 
 void Game::showGameOverScreen() {
@@ -236,21 +252,23 @@ void Game::showGameOverScreen() {
     SDL_DestroyTexture(texture);
     SDL_RenderPresent(renderer);
 
-    SDL_Delay(1000); // Hiển thị màn hình Game Over trong 3 giây
+    SDL_Delay(1000); // Hiển thị màn hình Game Over trong 1 giây
 
     gameState = MENU;
     resetGame(); // Reset game để chơi lại
 }
 
 void Game::resetGame() {
+    bullets.clear(); // Xóa tất cả đạn
+    enemies.clear(); // Xóa tất cả enemy
+    enemyBullets.clear(); // Xóa tất cả đạn của enemy
     score = 0; // Đặt lại điểm số
     player = new Player(960, 980); // Đặt lại vị trí nhân vật
     player->loadTexture(renderer, "player.png");
-    bullets.clear(); // Xóa tất cả đạn
-    enemies.clear(); // Xóa tất cả enemy
     enemySpeed = 0.5f;
-    enemySpawnRate = 60;
+    enemySpawnRate = 80;
     level = 1;
+
     running = true; // Chạy lại game
 }
 
@@ -266,6 +284,7 @@ void Game::render() {
     player->render(renderer);
     for (auto& bullet : bullets) bullet.render(renderer);
     for (auto& enemy : enemies) enemy.render(renderer);
+    for (auto& b : enemyBullets) b.render(renderer);
     renderScoreAndLevel();
     SDL_RenderPresent(renderer);
 }
@@ -355,7 +374,7 @@ SDL_Texture* Game::loadTexture(const std::string& path) {
     SDL_Texture* newTexture = NULL;
     SDL_Surface* loadedSurface = IMG_Load(path.c_str());
     if (!loadedSurface) {
-        std::cerr << "Lỗi tải ảnh: " << IMG_GetError() << std::endl;
+        std::cerr << "Failed to load IMG: " << IMG_GetError() << std::endl;
     } else {
         newTexture = SDL_CreateTextureFromSurface(renderer, loadedSurface);
         SDL_FreeSurface(loadedSurface);

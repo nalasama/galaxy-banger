@@ -8,15 +8,7 @@ void Bullet::update() {
     rect.y -= 20;
     if (rect.y < 0) active = false; // Nếu đạn ra khỏi màn hình thì biến mất
 }
-void Bullet::loadTexture(SDL_Renderer* renderer, const std::string& path) {
-    SDL_Surface* surface = IMG_Load(path.c_str());
-    if (!surface) {
-        std::cerr << "Lỗi tải ảnh Bullet: " << IMG_GetError() << std::endl;
-        return;
-    }
-    texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_FreeSurface(surface);
-}
+
 
 void Bullet::render(SDL_Renderer* renderer) {
     if (texture) {

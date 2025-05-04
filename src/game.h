@@ -11,7 +11,8 @@
 #include "Bullet.h"
 #include "Enemy.h"
 #include "Player.h"
-//#include "render.h"
+#include "EnemyBullet.h"
+
 enum GameState { MENU, PLAYING, EXIT };
 
 class Game {
@@ -37,11 +38,12 @@ private:
     Player* player;
     std::vector<Bullet> bullets;
     std::vector<Enemy> enemies;
+    std::vector<EnemyBullet> enemyBullets;
     SDL_Texture* loadTexture(const std::string& path);
     SDL_Texture* backgroundTexture;
     bool checkCollision(SDL_Rect a, SDL_Rect b);
     float enemySpeed = 1.0f;
-    int enemySpawnRate = 50;
+    int enemySpawnRate = 80;
     int level = 1;
     SDL_Rect levelRect;
     int score = 0;
